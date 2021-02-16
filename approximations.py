@@ -15,8 +15,6 @@ def close_enough(approx, exact, tol=0.01) :
     assert(abs(1 - r) < tol)
 
 
-
-
 # TODO: need to take logs to prevent zero division
 def binary_entropy(x) :
     assert((x >= 0) & (x <= 1))
@@ -40,9 +38,11 @@ def approx_combin(r, N) :
 def approx_combin_entropy(r, N) :
     assert(r < N)
     
-    h2 = binary_entropy(r/N)
-    correction = 2 * np.pi * N * ((N - r)/N) * (r/N)
-    logged = h2 * N - 0.5 * np.log2(correction)
+    h2 = binary_entropy(r / N)
+    free_prop = (N - r) / N
+    bound_prop = r / N
+    correction = 2 * pi * N * dof_prop * bound_prop
+    logged = h2 * N - 0.5 * log2(correction)
 
     return 2**(logged)
 
