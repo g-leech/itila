@@ -1,6 +1,7 @@
 import random
 import numpy as np
 
+
 # Uses strings for channel
 
 def byte2str(b) :
@@ -77,29 +78,56 @@ class RepCode() :
 
 class HammingCode() :
     def __init__(self, n=7, k=4) :
-        # Want tie-breaking so odd
-        assert(n % 2 != 0)
         self.n = n
         self.k = k
+        self.H = self.checker(n, k)
+        self.G = self.generator(self.H)
 
-    # TODO: generalise by building this from H
-    def generator(self) :
-        Gstring = ["1000",
-                    "0100",
-                    "0010",
-                    "0001",
-                    "1110",
-                    "0111",
-                    "1011"]
-        G = [list(r) for r in Gstring]
-        return np.array(G).astype(int).T
+    # P
+    def parity_submatrix(self, n, j) :
+        P = np.zeros((n-j, j), dtype=int)
 
-    def checker(self):
-        Hstring = ["1110100",
-                    "1101010",
-                    "1011001"]
-        H = [list(r) for r in Hstring]
-        return np.array(H).astype(int).T
+        num2bin = lambda i : str(bin(i))[2:]
+        isPowerOf2 = lambda n : (n & (n - 1)) == 0
+
+        domain = range(n, 2, -1)
+        domain = [i for i in domain if not isPowerOf2(i)]
+        c = 0
+        for i in domain:
+            s = num2bin(i).zfill(j)
+            P[c] = list(s)
+            c += 1
+
+        return P
+
+    # H
+    def checker(self, n, k):
+        j = k - 1 
+        P = self.parity_submatrix(n, j)
+        I = np.identity(j)
+        h = np.concatenate((P, I), axis=0)
+
+        return h.T.astype(int)
+
+    # G
+    def generator(self, H):
+        k, n = H.shape
+        l = n - k
+
+        idx = int(np.ceil(np.log2(n)))
+        slice = np.s_[idx+1 : n+1]
+        # remove powers of two from H:
+        P = np.delete(H, slice, 1)
+        I = np.identity(l)
+        G = np.concatenate((I, P.T), axis=1)
+
+        return G.astype(int)
+
+    def get_repeats(self, b) :
+        n = self.n
+        domain = range(0, len(b), n)
+
+        return [ b[i : i+n] for i in domain ]
 
     def nested_int(self, ll) :
         return [list(map(int, l)) for l in ll]
@@ -107,12 +135,14 @@ class HammingCode() :
     def pad(self, block) :
         padlen = (self.k - len(block))
         padding = [0] * padlen
+
         return block + padding
 
     def split_into_blocks(self, b) :
         domain = range(0, len(b), self.k)
         blocks = [ list(b[i : i+self.k]) for i in domain ]
         blocks = self.nested_int(blocks)
+
         return np.array(blocks, dtype='object')
 
     def encode(self, s) :
@@ -121,33 +151,49 @@ class HammingCode() :
 
         # handle ragged (non-k) lengths
         if len(blocks[-1]) != self.k :
-            blocks[-1] = self.pad(blocks[-1])
+           blocks[-1] = self.pad(blocks[-1])
 
-        if self.n == 7 and self.k == 4 :
-            G = self.generator()
-            t = [block @ G % 2 \
-                    for block in blocks]
-            return arr2str(t)
-        else :
-            raise NotImplementedError()
+        G = self.G
+        t = [block @ G % 2 \
+                for block in blocks]
+        return arr2str(t)
 
+
+    def correction(self, w, z) :
+        H = self.H
+        # Get syndrome
+        position = np.where(np.all(z == H, axis=0))[0]
+        if position.shape == (0,) :
+            # uncorrectable
+            return None 
+
+        # else correctable
+        idx = np.squeeze(position[0])
+        w[idx] = int(not w[idx])
+
+        return w
 
     def decode(self, r) :
-        return [self.decode_word(word) for word in r]
+        words = h.get_repeats(r)
+        words = [list(w) for w in words]
+        s_hat = ''.join([self.decode_word(word) for word in words])
+        
+        return bit_decode(s_hat)
 
 
     def decode_word(self, word) :
-        if self.n == 7 and self.k == 4 :
-            H = self.checker()
-            z = H.T @ np.array([word]) # % 2
-            s_is_zero = np.count_nonzero(z) == 0
+        H = self.H
+        w = np.array([word]).astype(int).T
+        z = H @ w % 2
+        errorFree = np.count_nonzero(z) == 0
 
-            if not s_is_zero:
-                print("Error!")
+        if not errorFree:
+            w = self.correction(w, z)
 
-            return s[:self.k-1]
-        else :
-            raise NotImplementedError()
+        s = w[:self.k].flatten() \
+            if w is not None else ""
+
+        return ''.join([str(a) for a in s])
 
 
 if __name__ == '__main__':
@@ -161,7 +207,7 @@ if __name__ == '__main__':
     t = bit_encode(s)
     print("Original: ", bit_decode(t))
     r = channel.transmit(t)
-    print("Raw: ", bit_decode(r))
+    print("Raw ", bit_decode(r))
 
     r3 = RepCode(r=3)
     t = r3.encode(s)    
@@ -173,8 +219,16 @@ if __name__ == '__main__':
     r = channel.transmit(t)
     print("R9: ", r9.decode(r))
 
-    # h = HammingCode() 
+    h = HammingCode(n=7, k=4)
+    t = h.encode(s)
+    r = channel.transmit(t)
+    shat = h.decode(r)
+    # Has an extra null byte if b !mod k
+    print("H7,4", shat[:-1])
+
+    # h = HammingCode(n=15, k=11)
     # t = h.encode(s)
     # r = channel.transmit(t)
-    # print("H7,4: ", h.decode(r))
-    
+    # shat = h.decode(r)
+    # # Has an extra null byte if b !mod k
+    # print("H15,11", shat[:-1])
