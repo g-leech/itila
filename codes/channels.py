@@ -84,8 +84,9 @@ class HammingCode() :
         self.G = self.generator(self.H)
 
     # P
-    def parity_submatrix(self, n, j) :
-        P = np.zeros((n-j, j), dtype=int)
+    def parity_submatrix(self, n, k) :
+        j = n - k
+        P = np.zeros((j, k), dtype=int)
 
         num2bin = lambda i : str(bin(i))[2:]
         isPowerOf2 = lambda n : (n & (n - 1)) == 0
@@ -95,30 +96,26 @@ class HammingCode() :
         c = 0
         for i in domain:
             s = num2bin(i).zfill(j)
-            P[c] = list(s)
+            P[:,c] = list(s)
             c += 1
 
         return P
 
     # H
     def checker(self, n, k):
-        j = n - k 
-        P = self.parity_submatrix(n, j)
+        j = n - k
+        P = self.parity_submatrix(n, k)
         I = np.identity(j)
-        h = np.concatenate((P, I), axis=0)
+        h = np.concatenate((P, I), axis=1)
 
-        return h.T.astype(int)
+        return h.astype(int)
 
     # G
     def generator(self, H):
-        k, n = H.shape
-        l = n - k
-
-        idx = int(np.ceil(np.log2(n)))
-        slice = np.s_[idx+1 : n+1]
-        # remove powers of two from H:
-        P = np.delete(H, slice, 1)
-        I = np.identity(l)
+        j, n = H.shape
+        k = n - j
+        I = np.identity(k)
+        P = H[:, :-(n-k)]
         G = np.concatenate((I, P.T), axis=1)
 
         return G.astype(int)
@@ -230,5 +227,5 @@ if __name__ == '__main__':
     t = h.encode(s)
     r = channel.transmit(t)
     shat = h.decode(r)
-    # Has an extra null byte if b !mod k
+    # Has an extra null byte if len(b) !mod k
     print("H15,11", shat[:-1])
