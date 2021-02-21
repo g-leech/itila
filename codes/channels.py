@@ -102,7 +102,7 @@ class HammingCode() :
 
     # H
     def checker(self, n, k):
-        j = k - 1 
+        j = n - k 
         P = self.parity_submatrix(n, j)
         I = np.identity(j)
         h = np.concatenate((P, I), axis=0)
@@ -214,21 +214,21 @@ if __name__ == '__main__':
     r = channel.transmit(t)
     print("R3: ", r3.decode(r))
 
-    r9 = RepCode(r=9)
-    t = r9.encode(s)    
+    r7 = RepCode(r=7)
+    t = r7.encode(s)    
     r = channel.transmit(t)
-    print("R9: ", r9.decode(r))
+    print("R7: ", r7.decode(r))
 
     h = HammingCode(n=7, k=4)
     t = h.encode(s)
     r = channel.transmit(t)
     shat = h.decode(r)
-    # Has an extra null byte if b !mod k
+    # Has an extra null byte if len(b) !mod k
     print("H7,4", shat[:-1])
 
-    # h = HammingCode(n=15, k=11)
-    # t = h.encode(s)
-    # r = channel.transmit(t)
-    # shat = h.decode(r)
-    # # Has an extra null byte if b !mod k
-    # print("H15,11", shat[:-1])
+    h = HammingCode(n=15, k=11)
+    t = h.encode(s)
+    r = channel.transmit(t)
+    shat = h.decode(r)
+    # Has an extra null byte if b !mod k
+    print("H15,11", shat[:-1])
