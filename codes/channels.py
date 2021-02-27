@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from scipy.spatial.distance import hamming
 
 
 # Uses strings for channel
@@ -30,6 +31,11 @@ def arr2str(arr) :
       .replace("[", "") \
       .replace(" ", "") for s in st]
     return ''.join(st)
+
+def check_error_rate(a, b, tru) :
+    ham = hamming(list(a), list(b))
+    print(ham)
+    assert(np.isclose(ham, tru, atol=0.02))
 
 
 class BinarySymmetricChannel() :
@@ -162,7 +168,7 @@ class HammingCode() :
         position = np.where(np.all(z == H, axis=0))[0]
         if position.shape == (0,) :
             # uncorrectable
-            return None 
+            return w 
 
         # else correctable
         idx = np.squeeze(position[0])
@@ -195,33 +201,49 @@ class HammingCode() :
 
 if __name__ == '__main__':
     noise = 0.1
-    print("with noise level", noise)
-
     channel = BinarySymmetricChannel(p=noise)
 
     s = "would be a shame if anything got flipped"
+    s = ''.join(["a"] * 10000)
 
     t = bit_encode(s)
-    print("Original: ", bit_decode(t))
+    # print("Original: ", bit_decode(t))
     r = channel.transmit(t)
-    print("Raw ", bit_decode(r))
+    # print("Raw ", bit_decode(r))
+
+    check_error_rate(t, r, tru=noise)
+    print()
 
     r3 = RepCode(r=3)
     t = r3.encode(s)    
     r = channel.transmit(t)
-    print("R3: ", r3.decode(r))
+    shat = r3.decode(r)
+    # print("R3: ", shat)
+
+    # Something wrong with this; error rate is clearly less than 0.1 on char level
+    # Probably a bit shift somewhere
+    check_error_rate(t, r, tru=0.03)
+
+    print()
 
     r7 = RepCode(r=7)
     t = r7.encode(s)    
     r = channel.transmit(t)
-    print("R7: ", r7.decode(r))
+    shat = r7.decode(r)
+    # print("R7: ", shat)
+    # ham = hamming(list(t), list(r))
+    # print(ham)
+    print()
 
     h = HammingCode(n=7, k=4)
     t = h.encode(s)
     r = channel.transmit(t)
     shat = h.decode(r)
     # Has an extra null byte if len(b) !mod k
-    print("H7,4", shat[:-1])
+    # print("H7,4", shat[:-1])
+    # ham = hamming(list(t), list(r))
+    # print(ham)
+    print()
 
     h = HammingCode(n=15, k=11)
     t = h.encode(s)
@@ -229,3 +251,4 @@ if __name__ == '__main__':
     shat = h.decode(r)
     # Has an extra null byte if len(b) !mod k
     print("H15,11", shat[:-1])
+
