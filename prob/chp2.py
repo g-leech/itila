@@ -18,6 +18,36 @@ def BT(d) :
 	return d["P(A|B)"]
 
 
+# surprisal; shannons
+# Strictly speaking, outcomes have information, not probs of outcomes
+def info(p):
+	return - np.log2(p) 
+
+
+# uncertainty; average surprisal per draw
+def entropy(ps):
+	return sum( p * info(p) \
+				if p != 0 else 0 \
+				 for p in ps )
+
+# A = alphabet of outcomes
+def maxent(A) :
+	return np.log2(A)
+
+
+def joint_entropy(joint) :
+	return sum(
+			joint(x,y) * info(joint(x,y))
+			if p != 0 else 0 \
+			for x,y in joint 	
+		)
+
+
+k = 6
+A = range(k)
+uniform = [1/len(A) for a in A]
+assert(entropy(uniform) == maxent(k))
+
 
 if __name__ == '__main__':
 	# Ex 2.3
@@ -73,14 +103,55 @@ if __name__ == '__main__':
 		p = prior
 		posterior = lambda p : likelihood(p, n, N) / evidence(n, N)
 		x = np.linspace(0, 1, 200)
-		plt.plot(x, posterior(x))
-		plt.title(f"nH={n}, N={N}")
-		plt.show()
+		#plt.plot(x, posterior(x))
+		#plt.title(f"nH={n}, N={N}")
 		
 		print(f"nH={n}, N={N}:", p_next_heads(n, N))
 
+	plt.show()
 
 	# Ex 2.10
-	A = ["B", "W", "W"]
-	B = ["B", "B", "W"]
 	p = 1/2
+	p1 = 1/3 # P(B|U1)
+	p2 = 2/3 # P(B|U2)
+
+	# P(U = A | X = B) 
+	d = {
+		"P(U1)" : p,
+		"P(¬U1)" : 1 - p,
+		"P(B|U1)" : p1,
+		"P(B|¬U1)" : p2
+	}
+	# P(B)
+	evidence = lambda d : d["P(B|U1)"] * d["P(U1)"] + d["P(B|¬U1)"] * d["P(¬U1)"]
+	# P(U1|B)
+	posterior = lambda d : (d["P(B|U1)"] * d["P(U1)"]) / evidence(d)
+	print("Ex2.10:  ", posterior(d))
+
+	# Ex 2.11
+	p = 1/2
+	p1 = 1/5 # P(B|U1)
+	p2 = 2/5 # P(B|U2)
+	# P(U = A | X = B) 
+	d = {
+		"P(U1)" : p,
+		"P(¬U1)" : 1 - p,
+		"P(B|U1)" : p1,
+		"P(B|¬U1)" : p2
+	}
+	evidence = lambda d : d["P(B|U1)"] * d["P(U1)"] + d["P(B|¬U1)"] * d["P(¬U1)"]
+	posterior = lambda d : (d["P(B|U1)"] * d["P(U1)"]) / evidence(d)
+	print("Ex2.11:  ", posterior(d))
+
+	#x = np.linspace(0, 1, 1000)
+	#plt.plot(x, info(x))
+	#plt.show()
+	
+	
+	A = list(filter(str.isalnum,map(chr,range(97))))
+	pIsNum = 1/3
+	pIsConsonant = 1/3
+	pIsVowel = 1/3
+	pNum = 1/10
+	H = np.log2(3) + pIsNum * np.log2(10) + pIsConsonant * np.log2(26) + pIsVowel * np.log2(5)
+	print("Ex2.13:  ", H)
