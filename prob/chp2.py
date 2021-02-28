@@ -19,7 +19,7 @@ def BT(d) :
 
 
 # surprisal; shannons
-# Strictly speaking, outcomes have information, not probs of outcomes
+# Strictly speaking, outcomes have information, not probs 
 def info(p):
 	return - np.log2(p) 
 
@@ -41,6 +41,21 @@ def joint_entropy(joint) :
 			if p != 0 else 0 \
 			for x,y in joint 	
 		)
+
+# for disjoint events. 
+# Split the ensemble into two subensembles a and b
+# Take H(\sumA, \sumB)
+# + normalised H(a) + normalised H(b) 
+def recursive_entropy(ps, m) :
+	ps = np.array(ps)
+	pa = sum(ps[:m])
+	pb = sum(ps[m:])
+
+	return entropy([pa,pb]) \
+			+ pa * entropy(ps[:m] / pa) \
+			+ pb * entropy(ps[m:] / pb) 
+
+
 
 
 k = 6
@@ -153,5 +168,10 @@ if __name__ == '__main__':
 	pIsConsonant = 1/3
 	pIsVowel = 1/3
 	pNum = 1/10
-	H = np.log2(3) + pIsNum * np.log2(10) + pIsConsonant * np.log2(26) + pIsVowel * np.log2(5)
+	H = np.log2(3) + pIsNum * np.log2(10) \
+					+ pIsConsonant * np.log2(26) \
+					 + pIsVowel * np.log2(5)
 	print("Ex2.13:  ", H)
+
+	print(entropy([0.5, 0.25, 0.25]))
+	print(recursive_entropy([0.5, 0.25, 0.25], 1))
